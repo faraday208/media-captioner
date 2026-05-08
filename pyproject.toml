@@ -1,20 +1,27 @@
 [project]
-name = "image-captioner"
-version = "0.1.0"
-description = "Multi-pass image captioning with Qwen3-VL-30B (Ollama backend)"
+name = "media-captioner"
+version = "1.0.0"
+description = "Media multi-pass captioning (Qwen3-VL via Ollama) — 5-pass JSON + caption export + undo"
 requires-python = ">=3.11"
 readme = "README.md"
+license = { file = "LICENSE" }
 authors = [{ name = "faraday208" }]
-keywords = ["image", "caption", "qwen", "vlm", "ollama", "dataset", "lora"]
+keywords = ["media", "image", "caption", "qwen", "vlm", "ollama", "dataset", "lora", "ai"]
 dependencies = [
     "requests>=2.31.0",
     "tqdm>=4.66.0",
-    # json-debugger UI için (opsiyonel ama workspace içinde paylaşılır)
-    "gradio>=4.0",
-    "pandas>=2.0",
-    "numpy>=1.24",
-    "pillow>=10.0",
+    "pillow>=10.0.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q --tb=short"
 
 [tool.uv]
 package = false

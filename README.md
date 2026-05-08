@@ -1,152 +1,214 @@
-# Image Captioner (v6)
+# media-captioner
 
-Qwen3-VL-30B ile görsel captioning için multi-pass sistem.
+> Medya görsellerini Qwen3-VL (Ollama) ile multi-pass JSON caption üretimi.
+> 5 ayrı detay pass'i (yüz, vücut, kıyafet, sahne, doğal dil) → birleştirilmiş
+> JSON → TXT export.
 
-**v6 Yenilikleri:**
-- 5-Pass sistemi (Pass 5: Natural Language Captioning)
-- JSON-aware captioning (structured data ile tutarlı)
-- 3 caption uzunluğu: short/medium/long
-- `json_to_txt.py` - Caption'ları TXT'ye çıkarma
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![uv](https://img.shields.io/badge/built%20with-uv-261230)](https://github.com/astral-sh/uv)
 
-## Mimari
+`media-dataset-prep` pipeline'ının **06. adımı**. Standalone kullanılabilir.
 
-```
-┌─────────────────┐              ┌─────────────────────────────┐
-│  LOCAL CLIENT   │    HTTP      │      REMOTE SERVER          │
-│                 │ ──────────►  │                             │
-│  [Resimler]     │   base64     │  Ollama / vLLM              │
-│  batch_client   │ ◄──────────  │  Qwen3-VL-30B               │
-│  [JSON Output]  │    JSON      │                             │
-└─────────────────┘              └─────────────────────────────┘
-```
+---
 
-## Yapı
+## 🎯 Ne yapıyor?
 
-```
-06-caption/
-├── WORKFLOW.md           # Detaylı workflow dokümanı
-├── README.md             # Bu dosya
-│
-├── server/               # RunPod Server (Ollama)
-│   ├── setup.sh          # İlk kurulum
-│   ├── start_ollama.sh   # Ollama server başlatma
-│   └── README.md
-│
-└── client/               # Local Client
-    ├── batch_client.py   # Ana captioning scripti (v6)
-    ├── json_to_txt.py    # JSON'dan TXT caption çıkarma
-    ├── requirements.txt  # Python bağımlılıkları
-    ├── v6_detailed_json.txt  # v6 JSON şeması
-    └── prompts/          # 5-pass prompt dosyaları
-        ├── pass1_face_hair.txt
-        ├── pass2_body_pose.txt
-        ├── pass3_clothing.txt
-        ├── pass4_scene.txt
-        └── pass5_captioning.txt  # Natural language captioning
-```
+5-pass captioning sistemi:
 
-## Hızlı Başlangıç
+| Pass | Odak | Çıktı suffix |
+|---|---|---|
+| 1 | Yüz + Saç | `_pass1_face.json` |
+| 2 | Vücut + Poz | `_pass2_body.json` |
+| 3 | Kıyafet + Aksesuarlar | `_pass3_clothing.json` |
+| 4 | Sahne + Teknik | `_pass4_scene.json` |
+| 5 | Natural Language Captioning (JSON-aware) | `_pass5_caption.json` |
 
-### Local Kullanım (Önerilen)
+Akış:
+1. Pass 1-4 paralel çalışır (her pass image + custom prompt → structured JSON)
+2. Pre-merge: JSON'lar birleştirilir
+3. Pass 5: image + merged JSON → 3 farklı uzunlukta caption (`short`, `medium`, `long`)
+4. Final merge: `<image>.json` (tüm pass'ler + caption'lar)
+5. Export: `<image>.txt` (seçilen caption_type)
+
+LoRA training için `<image>.jpg ↔ <image>.txt` eşleşmesi pipeline'ın çıktısı.
+
+---
+
+## 🚀 Kurulum
 
 ```bash
-cd /opt/media-pipeline/dataset-prep/06-caption
+git clone https://github.com/faraday208/media-captioner
+cd media-captioner
+uv sync
+```
 
-# Ollama localhost'ta çalışıyorsa
-python3 client/batch_client.py /path/to/images \
-    --backend ollama \
-    --server http://localhost:11434 \
+`media-dataset-prep` workspace altında: `make install`
+
+### Ollama backend
+
+```bash
+ollama pull qwen2.5-vl:7b              # Lokal hızlı test
+ollama pull qwen3-vl-abliterated:30b   # Production quality
+```
+
+Server localhost'ta default. Remote için `--server http://IP:11434`.
+
+---
+
+## 🛠️ Kullanım — CLI
+
+### Tek komut: tüm pass'ler + export (önerilen)
+
+```bash
+uv run python run.py -i ./dataset --model qwen2.5-vl:7b
+```
+
+### Production (RunPod / remote Ollama)
+
+```bash
+uv run python run.py -i ./dataset \
     --model huihui_ai/qwen3-vl-abliterated:30b-a3b-instruct \
-    --character "CharacterName" \
-    --pass all \
-    --workers 1
-```
-
-### Remote Server (RunPod)
-
-```bash
-# Tüm pass'ları çalıştır
-python client/batch_client.py ./images \
-    --backend ollama \
     --server http://<RUNPOD_IP>:11434 \
-    --model huihui_ai/qwen3-vl-abliterated:30b-a3b-instruct \
-    --workers 4 \
-    --pass all
+    --workers 8
 ```
 
-## CLI Parametreleri
-
-### batch_client.py
-
-| Parametre | Varsayılan | Açıklama |
-|-----------|------------|----------|
-| `folder` | (zorunlu) | Görsel klasörü |
-| `--backend` | `ollama` | Backend: `ollama` veya `vllm` |
-| `--server` | `http://localhost:11434` | Server URL |
-| `--model` | `huihui_ai/qwen3-vl-abliterated:30b-a3b-instruct` | Model adı |
-| `--pass` | `all` | Pass numarası: `1`, `2`, `3`, `4`, `5` veya `all` |
-| `--character` | `woman` | Karakter adı (prompt'larda ve caption'larda kullanılır) |
-| `--workers` | `4` | Paralel işlem sayısı |
-| `--max-tokens` | `1024` | Maksimum token sayısı |
-| `--overwrite` | `false` | Mevcut JSON'ları üzerine yaz |
-| `--merge` | `false` | Sadece mevcut pass dosyalarını birleştir |
-
-### json_to_txt.py
-
-| Parametre | Varsayılan | Açıklama |
-|-----------|------------|----------|
-| `folder` | (zorunlu) | JSON dosyalarının bulunduğu klasör |
-| `--type` | (zorunlu) | Caption tipi: `short`, `medium`, `long` |
-| `--overwrite` | `false` | Mevcut TXT'leri üzerine yaz |
+### Sadece tek pass
 
 ```bash
-# Örnek kullanım
-python3 json_to_txt.py /path/to/images --type long --overwrite
+uv run python run.py -i ./dataset --pass 5
 ```
 
-## 5-Pass Sistemi (v6)
+### Sadece export (önceki run'dan kalan JSON'lardan TXT)
 
-| Pass | Odak | Output |
-|------|------|--------|
-| 1 | Saç + Yüz İfadesi | `*_pass1_face.json` |
-| 2 | Vücut + Poz | `*_pass2_body.json` |
-| 3 | Kıyafet + Aksesuarlar | `*_pass3_clothing.json` |
-| 4 | Sahne + Teknik | `*_pass4_scene.json` |
-| 5 | Natural Language Captioning | `*_pass5_caption.json` |
-
-### v6 Akış
-
-```
-Pass 1-4 → Structured JSON
-    ↓
-Pass 5 (Image + Merged JSON → Captioning)
-    ↓
-Final Merge → image.json (structured + captions)
-    ↓
-json_to_txt.py → image.txt (training için)
+```bash
+uv run python run.py -i ./dataset --export-only --caption-type long
 ```
 
-### Captioning Özellikleri
+### Geri al (caption JSON + TXT dosyalarını sil)
 
-- **JSON-aware:** Pass 5, structured data'yı görerek tutarlı caption üretir
-- **Karakter ismi:** `--character Aria` → Caption'larda "Aria" kullanılır
-- **3 uzunluk:**
-  - `short`: 15-25 kelime, 1 cümle
-  - `medium`: 40-60 kelime, 2-3 cümle
-  - `long`: 80-120 kelime, 4-5 cümle
+```bash
+uv run python run.py --undo ./dataset/caption_report.json
+```
 
-`--pass all` kullanıldığında tüm pass'lar çalıştırılır ve otomatik olarak tek bir JSON dosyasına birleştirilir (`image.json`).
+### Direkt batch_client (tüm zengin flag'ler)
 
-## Gereksinimler
+```bash
+python -m caption_core.batch_client /path/to/images --model qwen2.5-vl:7b
+python -m caption_core.batch_client /path/to/images --pass 1
+python -m caption_core.batch_client /path/to/images --merge
+```
 
-**Client (Local):**
-- Python 3.10+
-- `requests`, `tqdm`
+---
 
-**Server (Ollama):**
-- Ollama kurulu
-- Qwen3-VL modeli (`ollama pull huihui_ai/qwen3-vl-abliterated:30b-a3b-instruct`)
+## 📋 Operation modes — özet
 
-## Detaylı Dokümantasyon
+| Mod | Komut | Etki | Undo |
+|---|---|---|---|
+| **Full caption + export** (default) | `run.py -i ./ds` | 5 pass + JSON + TXT | ✓ |
+| **Tek pass** | `--pass N` | Sadece pass N JSON | – |
+| **Export only** | `--export-only` | Mevcut JSON'lardan TXT | – |
+| **Undo** | `--undo REPORT` | JSON + TXT dosyalarını sil | – |
 
-Tam workflow için: [WORKFLOW.md](WORKFLOW.md)
+---
+
+## 🚩 Tüm CLI flag'leri
+
+| Flag | Tip | Default | Açıklama |
+|---|---|---|---|
+| `-i, --input` | str | – | Input klasörü (zorunlu, `--undo` hariç) |
+| `--model` | str | `qwen2.5-vl:7b` | Ollama model adı |
+| `--server` | str | `http://localhost:11434` | Ollama server URL |
+| `--workers` | int | 4 | Paralel worker sayısı |
+| `--pass` | int (1-5) | – | Sadece tek pass çalıştır |
+| `--export-only` | flag | False | Sadece JSON → TXT (caption etmeden) |
+| `--caption-type` | `short\|medium\|long` | `medium` | Export caption uzunluğu |
+| `--report` | str | `<input>/caption_report.json` | Sidecar JSON yolu |
+| `--undo` | str | – | Caption raporundan dosyaları sil |
+
+---
+
+## 🔌 In-process (library) kullanım
+
+```python
+from caption_core import batch_client, json_to_txt
+
+# Multi-pass çalıştır (subprocess yerine)
+# (batch_client.py CLI ana — refactor sonrası fonksiyon-tabanlı API gelecek)
+
+# JSON → TXT export
+json_to_txt.extract_captions("./dataset", "medium")
+```
+
+---
+
+## 📄 Rapor formatı
+
+```jsonc
+{
+  "version": "1",
+  "tool": "media-captioner",
+  "source_root": "/abs/path",
+  "timestamp": "2026-05-09T...",
+  "config": {
+    "model": "qwen2.5-vl:7b",
+    "server": "http://localhost:11434",
+    "workers": 4,
+    "pass": null,
+    "export_caption_type": "medium"
+  },
+  "summary": {"captioned": 100, "exported": 100},
+  "actions": [
+    {"created_files": [
+      "/abs/.../img1.json",
+      "/abs/.../img1.txt",
+      "/abs/.../img1_pass1_face.json"
+    ]}
+  ]
+}
+```
+
+`actions[].created_files` `--undo` için kullanılır.
+
+---
+
+## 🧪 Test
+
+```bash
+uv sync --group dev
+uv run pytest
+```
+
+14 test: package import + PASS_CONFIG + prompt loading + json_to_txt (filter pass dosyaları + export) + run.py argparse + export-only e2e.
+
+---
+
+## ⚠️ Limitations
+
+- **Ollama backend gerekli** (lokal veya remote). Bağımsız VLM yok
+- Tüm modeller `Qwen2.5-VL` veya `Qwen3-VL-30B` test edildi; başka VLM'ler için prompt'lar tune gerekir
+- `--undo` yaratılan **tüm** JSON + TXT dosyaları siler (selective değil)
+- Multi-pass uzun sürer: 7B model ~10 sn/dosya, 30B ~30 sn/dosya
+- İmage encoding base64 — büyük görsellerde RAM tüketimi
+- Pre-merge için kullanıcı manuel doğrulama gerekebilir (Pass 1-4 JSON tutarlılığı)
+
+---
+
+## 🏷️ Sürüm
+
+**v1.0.0** — clean release. `image-captioner` → `media-captioner`. Convention §uyumlu refactor:
+- 5 alt-klasör (client/, server/, tools/, archive/) → `caption_core/` paketi
+- Gradio json-debugger (tools/json-debugger) silindi (ayrı tool olabilir)
+- Server scripts (Ollama setup) silindi (kullanıcının sorumluluğu)
+- archive/ silindi (eski versiyon backup)
+- run.py wrapper (argparse) eklendi — sidecar JSON üretir
+- pyproject: gradio + pandas + numpy dependency'leri kaldırıldı (sadece requests + tqdm + pillow)
+- 14 test (package + prompt + json_to_txt + CLI)
+
+batch_client.py'nin 584 satırlık multi-pass logic'i korundu (zengin flag'leri ile direkt erişilebilir).
+
+---
+
+## 📜 Lisans
+
+[MIT](LICENSE)
