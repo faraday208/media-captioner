@@ -1,0 +1,92 @@
+## Pass 4: Scene & Technical (v5)
+## Focuses on: setting, camera, lighting, quality, style, safety
+
+Analyze the scene and technical aspects in this image.
+
+RULES:
+1. Pick ONE value per field from the options.
+2. Return ONLY valid JSON, no markdown.
+3. ALL text in English.
+
+Return this JSON:
+
+{
+  "setting": {
+    "location": "",
+    "background": "",
+    "lighting": "",
+    "time": "",
+    "atmosphere": ""
+  },
+  "camera": {
+    "angle": "",
+    "height": "",
+    "distance": "",
+    "focus": ""
+  },
+  "mood": {
+    "emotion": "",
+    "vibe": "",
+    "energy": ""
+  },
+  "technical": {
+    "quality": "",
+    "blur": "",
+    "noise": "",
+    "composition": "",
+    "ratio": ""
+  },
+  "content": {
+    "has_text": false,
+    "text": "",
+    "watermark": false
+  },
+  "style": {
+    "medium": "",
+    "aesthetic": ""
+  },
+  "safety": {
+    "nsfw": false,
+    "category": ""
+  }
+}
+
+FIELD OPTIONS:
+
+=== SETTING ===
+location: bedroom | studio | outdoor | beach | urban | nature | bathroom | pool | living room | balcony | rooftop | forest | hotel room | gym | office | restaurant | car | street | garden | club | yacht | kitchen
+background: (describe, e.g., "white bed with gray sheets", "blurred city lights", "plain gray backdrop", "green foliage", "brick wall")
+lighting: natural | studio | soft | harsh | warm | cool | golden hour | dramatic | backlit | rim light | diffused | candlelight | neon | flash | ambient | mixed | low key | high key
+time: morning | afternoon | evening | night | golden hour | blue hour | dawn | dusk | midday | not visible
+atmosphere: intimate | professional | casual | luxurious | cozy | cold | warm | romantic | edgy | clean | moody | dreamy | raw
+
+=== CAMERA ===
+angle: front | back | side | three-quarter | profile | diagonal | from below | from above | dutch angle
+height: eye-level | low-angle | high-angle | overhead | ground-level | worm's eye | bird's eye
+distance: extreme close-up | close-up | medium close-up | medium shot | full-body | wide shot | cowboy shot
+focus: (describe, e.g., "face sharp background blurred", "full body in focus", "shallow depth of field", "eyes in focus")
+
+=== MOOD ===
+emotion: happy | seductive | mysterious | playful | serious | dreamy | confident | vulnerable | sultry | fierce | innocent | melancholic | empowered | peaceful
+vibe: warm | cool | intimate | dramatic | soft | energetic | moody | romantic | sensual | ethereal | raw | luxurious | cozy | tense
+energy: low | medium | high | intense | calm | dynamic | lazy | explosive | peaceful
+
+=== TECHNICAL ===
+quality: masterpiece | best quality | high | medium | low | professional
+blur: none | motion blur | out of focus | depth of field | bokeh | slight blur
+noise: clean | grainy | film grain | artifacts | jpeg artifacts | slight noise
+composition: rule of thirds | centered | dynamic | symmetrical | minimalist | diagonal | leading lines
+ratio: 1:1 | 4:3 | 3:4 | 16:9 | 9:16 | 2:3 | 3:2 | 4:5
+
+=== CONTENT ===
+has_text: true | false
+text: (transcribe if present, else "")
+watermark: true | false
+
+=== STYLE ===
+medium: photography | digital art | oil painting | sketch | 3d render | illustration | film photography | polaroid | phone camera
+aesthetic: realistic | cinematic | vintage | monochrome | vibrant | pastel | dark | bright | muted | saturated | film look | instagram | editorial
+
+=== SAFETY ===
+nsfw: true | false
+category: safe | suggestive | explicit | artistic nude | implied nudity | partial nudity | fully clothed

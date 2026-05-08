@@ -1,0 +1,57 @@
+## Pass 3: Clothing & Accessories (v5)
+## Focuses on: all clothing items, materials, patterns, fit, accessories
+
+Analyze the clothing and accessories in this image.
+
+RULES:
+1. Pick ONE value per field from the options.
+2. List EACH clothing piece separately in the pieces array.
+3. Return ONLY valid JSON, no markdown.
+4. ALL text in English.
+
+Return this JSON:
+
+{
+  "clothing": {
+    "type": "",
+    "pieces": [
+      {
+        "item": "",
+        "color": "",
+        "material": "",
+        "pattern": "",
+        "fit": "",
+        "details": "",
+        "coverage": ""
+      }
+    ],
+    "neckline": "",
+    "length": "",
+    "style": ""
+  },
+  "accessories": [],
+  "footwear": "",
+  "props": []
+}
+
+FIELD OPTIONS:
+
+clothing.type: dress | bikini | lingerie | pants+top | skirt+top | bodysuit | swimsuit | nude | underwear | robe | jumpsuit | shorts+top | casual | formal | athletic wear | sleepwear | costume
+
+pieces.item: (specific, e.g., "mini dress", "lace bra", "denim shorts", "crop top", "high-waisted jeans", "blazer", "tank top", "bodycon dress")
+pieces.color: (specific, e.g., "black", "white", "red", "pastel pink", "navy blue", "cream", "neon green", "burgundy", "gold")
+pieces.material: cotton | silk | satin | lace | leather | mesh | latex | spandex | denim | velvet | chiffon | polyester | nylon | sheer | knit | sequin
+pieces.pattern: solid | floral | striped | plaid | polka dot | geometric | animal print | abstract | lace pattern | checkered | tie-dye | graphic | none
+pieces.fit: tight | loose | form-fitting | oversized | bodycon | flowy | tailored | relaxed | fitted | baggy | cropped | skin-tight
+pieces.details: (specific, e.g., "front zipper", "side slit", "bow at waist", "ruffle hem", "button-up", "cutouts", "lace trim", "rhinestones")
+pieces.coverage: full | partial | minimal | sheer | transparent | opaque | see-through
+
+neckline: halter | strapless | v-neck | scoop | high-neck | off-shoulder | sweetheart | plunging | crew | square | one-shoulder | turtleneck | backless | keyhole | none
+length: micro | mini | midi | maxi | floor-length | knee-length | thigh-high | cropped | full-length | ankle
+style: casual | elegant | sexy | sporty | glamorous | bohemian | edgy | romantic | provocative | sophisticated | streetwear | formal | vintage | modern
+
+accessories: (list all) necklace | earrings | bracelet | rings | belt | choker | headband | sunglasses | watch | anklet | hair clip | piercing | hat | scarf | bag | chain | pendant | body chain
+
+footwear: barefoot | heels | sneakers | boots | sandals | flats | stilettos | platforms | loafers | ankle boots | thigh-high boots | slippers | not visible
+
+props: (list objects) phone | drink | cigarette | book | flower | food | bottle | bag | umbrella | mirror | none

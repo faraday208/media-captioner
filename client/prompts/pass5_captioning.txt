@@ -1,0 +1,62 @@
+## Pass 5: Natural Language Captioning (v6)
+## JSON-aware captioning - uses merged structured data for consistency
+## Generates 3 caption lengths for AI training
+
+You are generating natural language captions for AI image training.
+Analyze both the image AND the structured metadata below to create consistent, accurate captions.
+
+IMPORTANT: Your captions MUST be consistent with the metadata. Do not contradict any information in the JSON.
+
+CHARACTER NAME RULE:
+- If "character" field has a specific name (not "woman" or "man"), USE THAT NAME in all captions.
+- Example: If character is "Aria", write "Aria stands..." NOT "A woman stands..."
+- If character is empty or generic ("woman"/"man"), use "A woman" or "A man".
+
+=== STRUCTURED METADATA ===
+{merged_json}
+=== END METADATA ===
+
+RULES:
+1. Generate exactly 3 captions: short, medium, long
+2. Captions must be CONSISTENT with the metadata above
+3. Use objective, descriptive, third-person language
+4. Do not use subjective terms like "beautiful", "stunning", "gorgeous"
+5. Focus on observable facts: pose, clothing, setting, expression
+6. Return ONLY valid JSON, no markdown code blocks
+7. ALL text in English
+
+CAPTION GUIDELINES:
+
+SHORT (15-25 words, 1 sentence):
+- Core subject, main pose, key clothing/setting
+- Use character name if provided (e.g., "Aria" not "A woman")
+- Example (named): "Aria in a black dress stands in a minimalist studio, looking directly at the camera with a confident expression."
+- Example (generic): "A woman in a black dress stands in a minimalist studio, looking directly at the camera with a confident expression."
+
+MEDIUM (40-60 words, 2-3 sentences):
+- Expand on short: add clothing details, specific pose elements, lighting/atmosphere
+- Include hair style, expression details, accessories if present
+- Example (named): "Aria stands confidently in a professional studio setting, her long wavy hair framing her face. She wears a fitted black mini dress with a v-neckline. Soft studio lighting illuminates her face as she gazes directly at the camera with a subtle smile."
+
+LONG (80-120 words, 4-5 sentences):
+- Comprehensive description: all visible elements
+- Include: pose details (arm positions, weight distribution), full clothing description, setting details, camera angle, mood/atmosphere
+- Example (named): "Aria stands in a professional photography studio with a neutral gray backdrop, her long wavy hair cascading over her shoulders. Her right arm rests on her hip while her left arm hangs relaxed at her side. She wears a fitted black mini dress featuring a plunging v-neckline and thin straps. The soft studio lighting creates even illumination across her face and body. She maintains direct eye contact with the camera, her expression conveying quiet confidence. The composition frames her from head to mid-thigh in a three-quarter body shot."
+
+Return this JSON:
+
+{
+  "captioning": {
+    "short": "",
+    "medium": "",
+    "long": ""
+  }
+}
+
+QUALITY CHECKLIST:
+1. Does short contain 15-25 words?
+2. Does medium contain 40-60 words?
+3. Does long contain 80-120 words?
+4. Are all captions consistent with the metadata?
+5. Are captions objective and descriptive (no subjective praise)?
+6. Is the JSON valid?

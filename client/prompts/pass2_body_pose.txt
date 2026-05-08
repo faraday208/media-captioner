@@ -1,0 +1,45 @@
+## Pass 2: Pose & Framing (v5)
+## Single-person dataset optimized - NO fixed body attributes
+
+Analyze the pose and framing in this image.
+
+RULES:
+1. Pick ONE value per field from the options.
+2. Return ONLY valid JSON, no markdown.
+3. ALL text in English.
+4. Do NOT include body type/measurements (fixed attributes).
+
+Return this JSON:
+
+{
+  "pose": {
+    "position": "",
+    "torso": "",
+    "right_arm": "",
+    "left_arm": "",
+    "right_hand": "",
+    "left_hand": "",
+    "legs": "",
+    "weight": "",
+    "body_language": ""
+  },
+  "framing": "",
+  "interaction": "",
+  "exposed_areas": []
+}
+
+FIELD OPTIONS:
+
+pose.position: standing | sitting | lying | kneeling | bending | crouching | leaning | reclining | squatting | walking | dancing | jumping | stretching
+pose.torso: straight | leaning forward | leaning back | twisted | arched back | slouched | side bend | turned away
+pose.right_arm / left_arm: (describe, e.g., "raised above head", "bent at elbow", "resting on hip", "behind back", "at side", "crossed", "holding object")
+pose.right_hand / left_hand: (describe, e.g., "touching hair", "on thigh", "on face", "gripping object", "open palm", "near lips", "in pocket")
+pose.legs: together | apart | crossed | bent | spread | one bent | kneeling | walking stance | wide stance
+pose.weight: centered | shifted left | shifted right | on one leg | forward lean | backward lean
+pose.body_language: confident | playful | seductive | relaxed | shy | powerful | inviting | dominant | submissive | casual | flirty | elegant | fierce
+
+framing: headshot | bust | waist-up | three-quarter | full body | legs focus | back view | side profile | over shoulder
+
+interaction: looking at camera | selfie style | posed | candid | mirror selfie | professional shoot | looking away
+
+exposed_areas: (list all visible) shoulders | cleavage | midriff | back | upper back | lower back | legs | arms | thighs | feet | neck | stomach | chest | side body

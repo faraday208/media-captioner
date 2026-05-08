@@ -1,0 +1,42 @@
+## Pass 1: Hair & Expression (v5)
+## Single-person dataset optimized - NO fixed attributes
+
+Analyze the hair and facial expression in this image.
+
+RULES:
+1. Pick ONE value per field from the options.
+2. Return ONLY valid JSON, no markdown.
+3. ALL text in English.
+4. Do NOT include skin_tone or hair_color (fixed attributes).
+
+CHARACTER: "{character_name}"
+
+Return this JSON:
+
+{
+  "character": "{character_name}",
+  "hair": {
+    "length": "",
+    "style": "",
+    "texture": "",
+    "parting": ""
+  },
+  "face": {
+    "visible": true,
+    "expression": "",
+    "gaze": "",
+    "makeup": ""
+  }
+}
+
+FIELD OPTIONS:
+
+hair.length: short | medium | long | very long
+hair.style: straight | wavy | curly | braided | ponytail | bun | messy | updo | pigtails | bob | half-up | loose waves | slicked back | side swept | beach waves | space buns | low bun | high ponytail
+hair.texture: smooth | frizzy | silky | thick | thin | shiny | voluminous | tousled | sleek | wet look
+hair.parting: middle | side | none | deep side
+
+face.visible: true | false
+face.expression: (2-4 words, e.g., "soft smile", "seductive pout", "playful wink", "serious gaze", "laughing", "biting lip")
+face.gaze: camera | away | down | up | side | over shoulder | closed eyes | looking back
+face.makeup: none | natural | light | glamorous | heavy | smoky eyes | bold lips | dramatic | dewy | matte | glitter | cat eye
