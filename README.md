@@ -179,7 +179,7 @@ uv sync --group dev
 uv run pytest
 ```
 
-14 test: package import + PASS_CONFIG + prompt loading + json_to_txt (filter pass dosyaları + export) + run.py argparse + export-only e2e.
+15 test: package import + PASS_CONFIG + prompt loading + json_to_txt (filter pass dosyaları + export) + run.py argparse + export-only e2e + undo snapshot-diff (yabancı dosya koruması).
 
 ---
 
@@ -187,7 +187,7 @@ uv run pytest
 
 - **Ollama backend gerekli** (lokal veya remote). Bağımsız VLM yok
 - Tüm modeller `Qwen2.5-VL` veya `Qwen3-VL-30B` test edildi; başka VLM'ler için prompt'lar tune gerekir
-- `--undo` yaratılan **tüm** JSON + TXT dosyaları siler (selective değil)
+- `--undo` sadece **bu run'da yaratılan** JSON + TXT dosyaları siler (snapshot-diff ile yabancı dosyalardan ayırt edilir); selective değil — çağrının tüm çıktılarını topluca siler
 - Multi-pass uzun sürer: 7B model ~10 sn/dosya, 30B ~30 sn/dosya
 - İmage encoding base64 — büyük görsellerde RAM tüketimi
 - Pre-merge için kullanıcı manuel doğrulama gerekebilir (Pass 1-4 JSON tutarlılığı)
@@ -196,6 +196,8 @@ uv run pytest
 
 ## 🏷️ Sürüm
 
+**v1.0.1** — kritik undo veri kaybı bug fix. Önceki davranışta `--undo` dataset klasöründeki TÜM `*.json` ve `*.txt` dosyalarını siliyordu (önceki pipeline adımlarından kalan `quality_report.json`, kullanıcının `README.txt` notları, vb. dahil). Snapshot-diff yaklaşımıyla artık sadece bu run'da yaratılan dosyalar undo listesine giriyor. +1 regression testi (15 toplam).
+
 **v1.0.0** — clean release. `image-captioner` → `media-captioner`. Convention §uyumlu refactor:
 - 5 alt-klasör (client/, server/, tools/, archive/) → `caption_core/` paketi
 - Gradio json-debugger (tools/json-debugger) silindi (ayrı tool olabilir)
@@ -203,7 +205,7 @@ uv run pytest
 - archive/ silindi (eski versiyon backup)
 - run.py wrapper (argparse) eklendi — sidecar JSON üretir
 - pyproject: gradio + pandas + numpy dependency'leri kaldırıldı (sadece requests + tqdm + pillow)
-- 14 test (package + prompt + json_to_txt + CLI)
+- 15 test (package + prompt + json_to_txt + CLI + undo snapshot-diff güvenliği)
 
 batch_client.py'nin 584 satırlık multi-pass logic'i korundu (zengin flag'leri ile direkt erişilebilir).
 

@@ -158,3 +158,43 @@ def test_run_undo_with_invalid_report(monkeypatch, tmp_path: Path):
         assert rc == 1
     finally:
         sys.path.pop(0)
+
+
+def test_run_excludes_foreign_files_from_undo_list(
+    monkeypatch, caption_dataset: Path
+):
+    """KRİTİK: pre-existing foreign files (önceki pipeline adımlarından kalan
+    quality_report.json, kullanıcı README.txt, vb.) undo listesine GİRMEMELİ.
+    Aksi halde captioner --undo bu dosyaları siler → veri kaybı."""
+    import json as _json
+    sys.path.insert(0, str(REPO_ROOT))
+    try:
+        # Yabancı dosyalar yerleştir (caption etmeden önce)
+        (caption_dataset / "quality_report.json").write_text(
+            _json.dumps({"tool": "media-quality-checker"})
+        )
+        (caption_dataset / "README.txt").write_text("user notes")
+
+        from run import main
+        monkeypatch.setattr(sys, "argv", [
+            "run.py", "-i", str(caption_dataset),
+            "--export-only", "--caption-type", "short",
+        ])
+        assert main() == 0
+
+        rep = _json.loads(
+            (caption_dataset / "caption_report.json").read_text()
+        )
+        files = []
+        for a in rep["actions"]:
+            files.extend(Path(p).name for p in a["created_files"])
+
+        # Yabancı dosyalar listede OLMAMALI
+        assert "quality_report.json" not in files
+        assert "README.txt" not in files
+        # Captioner'ın kendi raporu da listede olmamalı (kendi-kendini silme)
+        assert "caption_report.json" not in files
+        # Yeni .txt listede OLMALI
+        assert any(f.endswith(".txt") and f != "README.txt" for f in files)
+    finally:
+        sys.path.pop(0)

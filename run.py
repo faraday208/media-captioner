@@ -80,6 +80,29 @@ def _run_undo(report_path: Path) -> int:
     return 0
 
 
+def _scan_existing(input_dir: Path) -> set[str]:
+    """Captioning öncesi mevcut .json + .txt dosyalarının snapshot'u (resolve absolute)."""
+    snapshot: set[str] = set()
+    for ext in (".json", ".txt"):
+        for p in input_dir.rglob(f"*{ext}"):
+            snapshot.add(str(p.resolve()))
+    return snapshot
+
+
+def _diff_created(
+    input_dir: Path, before: set[str], report_path: Path
+) -> list[str]:
+    """Captioning sonrası eklenen .json + .txt dosyalarını döndür.
+    Rapor dosyasının kendisi listeden çıkarılır (kendi-kendini-silme yok)."""
+    after: set[str] = set()
+    for ext in (".json", ".txt"):
+        for p in input_dir.rglob(f"*{ext}"):
+            after.add(str(p.resolve()))
+    new_files = after - before
+    new_files.discard(str(report_path.resolve()))
+    return sorted(new_files)
+
+
 def _run_caption(args: argparse.Namespace, input_dir: Path) -> int:
     """batch_client.py'yi sarmal — Multi-pass captioning çalıştır."""
     from caption_core import batch_client
@@ -169,6 +192,9 @@ def main() -> int:
     print(f"Mode:    {'export-only' if args.export_only else 'caption + export'}")
     print(f"{'='*70}\n")
 
+    # Captioning öncesi snapshot — yabancı dosyalar undo listesine GİRMESİN
+    before = _scan_existing(input_dir)
+
     if args.export_only:
         rc = _run_export(input_dir, args.caption_type)
     else:
@@ -176,17 +202,16 @@ def main() -> int:
         if rc == 0:
             _run_export(input_dir, args.caption_type)
 
-    # Rapor yaz (yaratılan dosyaları topla)
-    action_files: list[str] = []
-    for p in input_dir.rglob("*.json"):
-        action_files.append(str(p))
-    for p in input_dir.rglob("*.txt"):
-        action_files.append(str(p))
+    # Rapor yolu (snapshot diff'i için report dışlanmalı)
+    report_path = Path(args.report) if args.report else input_dir / DEFAULT_REPORT_NAME
+    action_files = _diff_created(input_dir, before, report_path)
+    captioned = sum(1 for f in action_files if f.endswith(".json"))
+    exported = sum(1 for f in action_files if f.endswith(".txt"))
 
     report = _write_report(
         input_dir, args,
-        captioned=len(list(input_dir.rglob("*.json"))),
-        exported=len(list(input_dir.rglob("*.txt"))),
+        captioned=captioned,
+        exported=exported,
         action_files=action_files,
     )
     print(f"\nRapor: {report}")
