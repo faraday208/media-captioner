@@ -1,6 +1,6 @@
 [project]
 name = "media-captioner"
-version = "1.0.1"
+version = "1.1.0"
 description = "Media multi-pass captioning (Qwen3-VL via Ollama) — 5-pass JSON + caption export + undo"
 requires-python = ">=3.11"
 readme = "README.md"
