@@ -400,9 +400,21 @@ def process_folder(
     character_name: str,
     overwrite: bool,
     merge_only: bool,
-    backend: str = "ollama"
+    backend: str = "ollama",
+    progress_cb=None,
+    cancel_event=None,
 ):
-    """Klasördeki görselleri işle"""
+    """Klasördeki görselleri işle.
+
+    progress_cb: opsiyonel Callable[[int, int, int, int, str, dict], None] —
+                 (pass_idx_1based, total_passes, current_img, total_imgs, msg, stats)
+                 olarak çağrılır. `stats` = tüm pass'lar boyunca kümülatif
+                 {"success": int, "skipped": int, "failed": int}. UI img/s ve ETA
+                 hesabı için success'i baz alır (skipped'lerde gerçek inference yok).
+                 CLI tqdm bağımsız çalışmaya devam eder.
+    cancel_event: opsiyonel threading.Event — set olursa pending future'lar
+                  iptal edilir ve process_folder döner.
+    """
     folder = Path(folder_path)
     if not folder.exists():
         print(f"Error: Folder not found: {folder}")
@@ -414,12 +426,31 @@ def process_folder(
         return
 
     print(f"Found {len(images)} images in {folder}")
+    total_passes = len(pass_nums) if not merge_only else 1
+
+    def _is_cancelled() -> bool:
+        return bool(cancel_event is not None and cancel_event.is_set())
 
     if merge_only:
         print("Merging JSON files...")
         merged_count = 0
         deleted_count = 0
-        for img in tqdm(images, desc="Merging"):
+        # Merge için stats: her tamamlanan dosya "success" sayılır (gerçek iş, hızlı)
+        merge_stats = {"success": 0, "skipped": 0, "failed": 0}
+        if progress_cb:
+            progress_cb(
+                1, 1, 0, len(images), "Merging başlatılıyor…",
+                dict(merge_stats),
+            )
+        for idx, img in enumerate(tqdm(images, desc="Merging"), 1):
+            if _is_cancelled():
+                if progress_cb:
+                    progress_cb(
+                        1, 1, idx - 1, len(images), "İptal edildi",
+                        dict(merge_stats),
+                    )
+                print("Cancelled by user")
+                return
             merged = merge_json_files(img)
             if merged:
                 final_path = img.with_suffix(".json")
@@ -432,6 +463,12 @@ def process_folder(
                     if pass_file.exists():
                         pass_file.unlink()
                         deleted_count += 1
+            merge_stats["success"] += 1
+            if progress_cb:
+                progress_cb(
+                    1, 1, idx, len(images), f"Merge: {idx}/{len(images)}",
+                    dict(merge_stats),
+                )
 
         print(f"Merge complete: {merged_count}/{len(images)} files")
         print(f"Deleted {deleted_count} pass files")
@@ -448,13 +485,30 @@ def process_folder(
     # Track overall statistics
     total_stats = {"success": 0, "skipped": 0, "failed": 0}
 
-    for pass_num in pass_nums:
+    for pass_idx, pass_num in enumerate(pass_nums, 1):
+        if _is_cancelled():
+            print("Cancelled before pass start")
+            if progress_cb:
+                progress_cb(
+                    pass_idx, total_passes, 0, len(images), "İptal edildi",
+                    dict(total_stats),
+                )
+            return
+
         print(f"\n{'='*50}")
         print(f"Processing Pass {pass_num}/5: {PASS_CONFIG[pass_num]['file']}")
         print(f"{'='*50}")
 
         pass_stats = {"success": 0, "skipped": 0, "failed": 0}
         failed_images = []
+        completed = 0
+
+        if progress_cb:
+            progress_cb(
+                pass_idx, total_passes, 0, len(images),
+                f"Pass {pass_num} başlatılıyor",
+                dict(total_stats),
+            )
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [
@@ -465,20 +519,51 @@ def process_folder(
             ]
 
             with tqdm(total=len(images), desc=f"Pass {pass_num}", unit="img") as pbar:
+                cancelled = False
                 for future in as_completed(futures):
+                    if _is_cancelled():
+                        # Pending future'ları iptal et, döngüden çık.
+                        # cancel_futures=True → henüz başlamamış olanları drop'lar;
+                        # in-flight olanlar HTTP timeout süresince devam edebilir.
+                        executor.shutdown(wait=False, cancel_futures=True)
+                        cancelled = True
+                        break
+
                     img_path, ok, msg = future.result()
 
+                    # pass_stats + total_stats anında güncellenir → UI rate hesabı
+                    # skipped'leri payda dışı tutabilsin diye total_stats canlı akar.
                     if ok:
                         if msg == "skipped":
                             pass_stats["skipped"] += 1
+                            total_stats["skipped"] += 1
                         else:
                             pass_stats["success"] += 1
+                            total_stats["success"] += 1
                     else:
                         pass_stats["failed"] += 1
+                        total_stats["failed"] += 1
                         failed_images.append((img_path.name, msg))
                         pbar.write(f"FAIL {img_path.name}: {msg}")
 
+                    completed += 1
                     pbar.update(1)
+                    if progress_cb:
+                        progress_cb(
+                            pass_idx, total_passes, completed, len(images),
+                            f"Pass {pass_num}: {completed}/{len(images)}",
+                            dict(total_stats),
+                        )
+
+        if cancelled:
+            print(f"Pass {pass_num} cancelled at {completed}/{len(images)}")
+            if progress_cb:
+                progress_cb(
+                    pass_idx, total_passes, completed, len(images),
+                    f"Pass {pass_num} iptal edildi",
+                    dict(total_stats),
+                )
+            return
 
         # Pass summary
         print(f"\nPass {pass_num} Summary:")
@@ -492,10 +577,7 @@ def process_folder(
                 print(f"  - {name}: {err[:50]}...")
             if len(failed_images) > 5:
                 print(f"  ... and {len(failed_images) - 5} more")
-
-        total_stats["success"] += pass_stats["success"]
-        total_stats["skipped"] += pass_stats["skipped"]
-        total_stats["failed"] += pass_stats["failed"]
+        # total_stats artık per-future güncelleniyor; duplicate toplama gerekmez.
 
     # Final summary
     print(f"\n{'='*50}")
