@@ -13,6 +13,28 @@
 
 ---
 
+## English
+
+**What it does.** Generates multi-pass JSON captions for images using Qwen3-VL through Ollama. Five separate detail passes (face/hair, body pose, clothing, scene, natural language) are merged into a single JSON document, with TXT export for training pipelines.
+
+**Install**
+
+```bash
+git clone https://github.com/faraday208/media-captioner
+cd media-captioner
+uv sync
+```
+
+**Basic usage**
+
+```bash
+uv run python run.py -i ./dataset --model qwen2.5-vl:7b
+```
+
+Step **06** of the [`media-dataset-prep`](https://github.com/faraday208/media-dataset-prep) pipeline; also works standalone. The detailed documentation below is in Turkish.
+
+---
+
 ## 🎯 Ne yapıyor?
 
 5-pass captioning sistemi:
